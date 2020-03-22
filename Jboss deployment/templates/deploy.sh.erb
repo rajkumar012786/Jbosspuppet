@@ -1,0 +1,175 @@
+#!/bin/bash 
+#script for jboss deployement
+####------------------------------------
+#check whether 3_Code directory exist, if yes then  rename it 
+if [ -d /app/platform/3_Code ]
+then
+	echo "3_Code directory already exist, taking a backup of it on $(date +%y-%m-%d:%H-%M-%S).backup" 
+	cd /app/platform/ && mv 3_Code 3_Code.$(date +%y-%m-%d:%H-%M-%S).backup
+fi
+#check whether latest jboss tarball exist, if yes then extract it on /app/platform directory
+if [ -d /tmp/jbossdep ]
+then 
+	tarname=$(find /tmp/jbossdep/ -name "*.tar" -exec basename {} \;)
+	cd /tmp/jbossdep
+	if [ $? == 0 ]
+	then
+		 tar xf $tarname -C /app/platform/ 
+		 if [ $? == 0 ]
+		 then 
+		 	echo "jboss tarball is extracted on target directory"
+		 else 
+			echo "failure on tarball extraction,check the correctnesss of tarball"
+		 	exit 1
+		 fi
+	else
+	echo "jbossdep directory does not exist"
+	exit 1
+	fi
+fi
+#check the name of host for ims or non ims
+/bin/hostname -f > /tmp/hostnamefileforjboss
+if [ $(egrep '^.*ims.*\-[pcw][hco]*' /tmp/hostnamefileforjboss) ]
+then
+	cd /app/platform/3_Code
+	if [ $? == 0 ]
+	then
+		ant install.prod.ims > /tmp/build.$(date +%y%m%d%H%M) 2>&1
+		if [ $? = 0 ]
+		then
+			echo "build is done, check output under the $(date +%y%m%d%H%M) directory"
+		else
+			echo "build failed, check output under the  $(date +%y%m%d%H%M)  directory "
+			exit 1
+		fi
+	else
+		echo "failure in directory changing,check whether directory exist"
+		exit 1
+	fi
+elif [ $(egrep '^.*ims.*\-qc*' /tmp/hostnamefileforjboss)]
+then
+	cd /app/platform/3_Code 
+	if [ $? == 0 ]
+        then
+		ant install.uat.ims > /tmp/build.$(date +%y%m%d%H%M) 2>&1
+		if [ $? = 0 ]
+                then
+                        echo "build is done, check output under the $(date +%y%m%d%H%M) directory"
+                else
+                        echo "build failed, check output under the $(date +%y%m%d%H%M) directory"
+                        exit 1
+                fi
+	else
+                echo "failure in directory changing,check whether directory exist"
+		exit 1
+	fi
+elif [ $(egrep '^.*\-qc*' /tmp/hostnamefileforjboss |grep -v ims) ]
+then
+	cd /app/platform/3_Code
+        if [ $? == 0 ]
+        then
+                ant install.uat  > /tmp/build.$(date +%y%m%d%H%M) 2>&1
+                if [ $? = 0 ]
+                then
+                        echo "build is done, check output under the $(date +%y%m%d%H%M) directory"
+                else
+                        echo "build failed, check output under the $(date +%y%m%d%H%M) directory"
+                        exit 1
+                fi
+        else
+                echo "failure in directory changing,check whether directory exist"
+                exit 1
+        fi
+elif  [ $(egrep '^.*\-[pcw][hco]*' /tmp/hostnamefileforjboss |grep -v ims) ]
+then
+        cd /app/platform/3_Code
+        if [ $? == 0 ]
+        then
+                ant install.prod  > /tmp/build.$(date +%y%m%d%H%M) 2>&1
+                if [ $? = 0 ]
+                then
+                        echo "build is done, check output under the $(date +%y%m%d%H%M) directory"
+                else
+                        echo "build failed, check output under the  $(date +%y%m%d%H%M)  directory "
+                        exit 1
+                fi
+        else
+                echo "failure in directory changing,check whether directory exist"
+                exit 1
+        fi
+else
+	echo "host name is unknown"
+fi
+
+
+#check the name of host for QC  ims or QC non ims
+#/bin/hostname -f > /tmp/hostnamefileforjboss
+#grep qc /tmp/hostnamefileforjboss
+#if [ $? == 0 ]
+#then
+#        cd /app/platform/3_Code
+#       if [ $? == 0 ]
+#        then
+#                ant install.uat > /tmp/build.$(date +%y%m%d%H%M) 2>&1
+#                if [ $? = 0 ]
+#                then
+#                        echo "build is done, check output under the $(date +%y%m%d%H%M) directory"
+#                else
+#                        echo "build failed, check output under the  $(date +%y%m%d%H%M)  directory "
+#                        exit 1
+#                fi
+#        else
+#                echo "failure in directory changing,check whether directory exist"
+#                exit 1
+#        fi
+#else
+#        cd /app/platform/3_Code
+#        if [ $? == 0 ]
+#        then
+#                ant install.uat.ims > /tmp/build.$(date +%y%m%d%H%M) 2>&1
+#                if [ $? = 0 ]
+#                then
+#                        echo "build is done, check output under the $(date +%y%m%d%H%M) directory"
+#                else
+#                        echo "build failed, check output under the $(date +%y%m%d%H%M) directory"
+#                        exit 1
+#                fi
+#        else
+#                echo "failure in directory changing,check whether directory exist"
+#                exit 1
+#        fi
+#fi
+
+#check whether certification exist or not
+cd /app/platform/java/lib/security 
+if [ $? == 0 ]
+then
+	if [ -e cacerts ]
+	then
+		 mv cacerts cacerts_bak.$(date +%y%m%d%H%M)
+		 echo "taking backup of old certificate"
+	else
+		echo "old certificates does not exist,copying new certificates"
+	fi
+	cp /tmp/jbossdep/cacerts  . && echo "certificate is copied" || echo "failure in copying, check whether cacert file esixt  under jbossdep  directory under tmp"
+else
+	echo "could not change the security directory, check whether it is exist"
+	exit 1
+fi
+### add the code to copy the ear file 
+# cd  " write the directory name for webservices.ear file"
+# if [ $? == 0 ]
+# then
+# 	if [ -e webservices.ear ]
+# 	then
+# 		cp webservices.ear  /app/platform/jboss/standalone/deployments/ && echo "webservices.ear file is copied" || echo "failure in copying file"
+#
+# 	else
+#		echo "webservices.ear files does not exist"
+#	fi
+#else
+#	echo "failure in changing the directory for weservices.ear file"
+#	exit 1
+#fi
+#
+

@@ -1,0 +1,19 @@
+#!/bin/bash
+cd /app/platform/jboss/bin
+if [ $? == 0 ]
+then
+                echo "starting jboss process"
+                ./standalone.sh & disown
+                pgrep -lf jboss > /dev/null 2>&1
+                if [ $? == 0 ]
+                then
+                        echo " jboss is running"
+                        exit 0
+                else
+                        echo "jboss is not running, check the java process"
+                        exit 1
+                fi
+else
+        echo "jboss bin directory does not exist"
+fi
+

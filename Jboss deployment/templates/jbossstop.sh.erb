@@ -1,0 +1,13 @@
+#!/bin/bash
+pgrep -lf jboss > /tmp/jbossprocesslist
+        if [ $? == 0 ]
+        then
+                echo "stoping already running jboss process"
+                for i in $(cat /tmp/jbossprocesslist | awk '{print $1}')
+                do
+                        kill -9 $i
+                done
+	else
+	echo "jboss is not running"
+fi
+
